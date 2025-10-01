@@ -10,19 +10,9 @@ server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 server.use(cookieParser());
 
-// Configuração de CORS
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-];
-
+// Configuração de CORS para qualquer origem
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Origin not allowed by CORS"));
-    }
-  },
+  origin: true, // aceita qualquer origem
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
