@@ -99,7 +99,7 @@ const atualizarDataFimTarefa = async (req, res) => {
 
         res.status(201).json({
             message: "Data de finalização atualizada com sucesso!",
-            dataFimNova: puxarDadosTarefas[0].dataFimTarefaFormatada
+            dataFimNova: puxarDadosTarefas[0].datafimtarefaformatada
         });
     } catch (err) {
         return res.status(501).json({ error: true });
