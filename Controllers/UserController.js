@@ -9,8 +9,7 @@ const cadastro = async (req, res) => {
             return;
         }
 
-        const criarUsuario = await UserService.cadastroUsuario(nomeUsuario, senhaUsuario);
-
+        await UserService.cadastroUsuario(nomeUsuario, senhaUsuario);
         res.status(201).json(true);
 
     } catch (err) {
@@ -22,8 +21,8 @@ const cadastro = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { nomeUsuario, senhaUsuario } = req.body;
-
         const loginProcesso = await UserService.loginProcesso(nomeUsuario, senhaUsuario);
+
         if (!loginProcesso[0]) {
             res.status(201).json(false);
             return;
@@ -31,7 +30,7 @@ const login = async (req, res) => {
 
         res.cookie("auth_token", loginProcesso[1], {
             httpOnly: true,
-            secure: false,
+            secure: true, // alterado
             sameSite: "Lax",
             maxAge: 60 * 60 * 1000 //1 hora
         });
@@ -44,21 +43,19 @@ const login = async (req, res) => {
     }
 }
 
-const perfil = async (req, res) => {//finalizar
+const perfil = async (req, res) => {
     const token = req.cookies.auth_token || "";
     try {
         const usuarioDados = await UserService.perfil(token);
-
         res.status(201).json({ usuarioDados: usuarioDados[0].nomeusuario });
     } catch (error) {
         res.status(501).json({ message: "Erro ao tentar acessar o perfil" });
     }
 }
 
-
 const logout = async (req, res) => {
     try {
-        const deslogar = await UserService.logout(req.cookies.auth_token);
+        await UserService.logout(req.cookies.auth_token);
     } catch (err) {
         return err;
     }
@@ -66,7 +63,7 @@ const logout = async (req, res) => {
     res.clearCookie("auth_token", {
         path: "/",
         httpOnly: true,
-        secure: false, // Em produção, use "true" se estiver com HTTPS
+        secure: true, // alterado
         sameSite: "Lax"
     });
     res.status(201).json({ message: "Deslogado com sucesso!" });
@@ -88,7 +85,7 @@ const Islogged = async (req, res) => {
             res.clearCookie("auth_token", {
                 path: "/",
                 httpOnly: true,
-                secure: false, // Em produção, use "true" se estiver com HTTPS
+                secure: true, // alterado
                 sameSite: "Lax"
             });
 
@@ -107,7 +104,6 @@ const alterarNomeUsuario = async (req, res) => {
     const { usuarioUpdate } = req.body;
 
     const regex = /[^a-zA-Z0-9_.]/;
-
     if (regex.test(usuarioUpdate)) {
         res.status(201).json({ message: "Não foi possível alterar o nome de usuário, pois há caractéres especiais no nome." });
         return;
@@ -145,7 +141,7 @@ const alterarSenhaUsuario = async (req, res) => {
         const alterarSenhaUsuario = await UserService.alterarSenhaUsuario(idUsuarioSessao, senhaAntigaUpdate, senhaUpdate);
 
         if (!alterarSenhaUsuario) {
-            res.status(201).json({ message: "As senha antiga está incorreta!" });
+            res.status(201).json({ message: "A senha antiga está incorreta!" });
             return null;
         }
 
@@ -164,12 +160,12 @@ const deletarConta = async (req, res) => {
     }
 
     try {
-        const deletarConta = await UserService.deletarConta(idUsuarioSessao);
+        await UserService.deletarConta(idUsuarioSessao);
 
         res.clearCookie("auth_token", {
             path: "/",
             httpOnly: true,
-            secure: false, // Em produção, use "true" se estiver com HTTPS
+            secure: true, // alterado
             sameSite: "Lax"
         });
 
