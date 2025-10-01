@@ -4,19 +4,18 @@ const cadastro = async (req, res) => {
     try {
         const { nomeUsuario, senhaUsuario, confirmarSenhaUsuario } = req.body;
 
-        if ((!nomeUsuario || !senhaUsuario || !confirmarSenhaUsuario) || (senhaUsuario !== confirmarSenhaUsuario)) {
-            res.status(500).json({ err: true });
-            return;
+        if (!nomeUsuario || !senhaUsuario || !confirmarSenhaUsuario || senhaUsuario !== confirmarSenhaUsuario) {
+            return res.status(400).json({ err: true, message: "Dados inválidos" });
         }
 
         await UserService.cadastroUsuario(nomeUsuario, senhaUsuario);
-        res.status(201).json(true);
+        return res.status(201).json(true);
 
     } catch (err) {
         console.error(err);
-        res.status(500).json(false);
+        return res.status(500).json(false);
     }
-}
+};
 
 const login = async (req, res) => {
     try {
@@ -24,140 +23,129 @@ const login = async (req, res) => {
         const loginProcesso = await UserService.loginProcesso(nomeUsuario, senhaUsuario);
 
         if (!loginProcesso[0]) {
-            res.status(201).json(false);
-            return;
+            return res.status(401).json(false);
         }
 
         res.cookie("auth_token", loginProcesso[1], {
             httpOnly: true,
-            secure: true, // alterado
-            sameSite: "Lax",
-            maxAge: 60 * 60 * 1000 //1 hora
+            secure: true,       // sempre true
+            sameSite: "None",   // necessário para cross-origin
+            maxAge: 60 * 60 * 1000
         });
 
-        res.status(201).json(true);
+        return res.status(200).json(true);
 
     } catch (err) {
         console.error(err);
-        res.status(501).json(false);
+        return res.status(500).json(false);
     }
-}
+};
 
 const perfil = async (req, res) => {
     const token = req.cookies.auth_token || "";
     try {
         const usuarioDados = await UserService.perfil(token);
-        res.status(201).json({ usuarioDados: usuarioDados[0].nomeusuario });
+        return res.status(200).json({ usuarioDados: usuarioDados[0].nomeusuario });
     } catch (error) {
-        res.status(501).json({ message: "Erro ao tentar acessar o perfil" });
+        return res.status(500).json({ message: "Erro ao tentar acessar o perfil" });
     }
-}
+};
 
 const logout = async (req, res) => {
     try {
         await UserService.logout(req.cookies.auth_token);
     } catch (err) {
-        return err;
+        console.error(err);
     }
 
     res.clearCookie("auth_token", {
         path: "/",
         httpOnly: true,
-        secure: true, // alterado
-        sameSite: "Lax"
+        secure: true,
+        sameSite: "None"
     });
-    res.status(201).json({ message: "Deslogado com sucesso!" });
-}
+
+    return res.status(200).json({ message: "Deslogado com sucesso!" });
+};
 
 const Islogged = async (req, res) => {
     const idUsuarioSessao = req.cookies.auth_token || "";
 
-    if (idUsuarioSessao) {
-        try {
-            const estaLogado = await UserService.Islogged(idUsuarioSessao);
+    if (!idUsuarioSessao) return res.status(200).json(false);
 
-            if (estaLogado) {
-                res.status(201).json(estaLogado);
-                return;
-            }
+    try {
+        const estaLogado = await UserService.Islogged(idUsuarioSessao);
 
-            //Se o cookie expirou, deleta ele do banco de dados e retorna false para o front
-            res.clearCookie("auth_token", {
-                path: "/",
-                httpOnly: true,
-                secure: true, // alterado
-                sameSite: "Lax"
-            });
+        if (estaLogado) return res.status(200).json(estaLogado);
 
-            res.status(201).json(false);
+        // Cookie expirado ou inválido
+        res.clearCookie("auth_token", {
+            path: "/",
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        });
 
-        } catch (err) {
-            return err;
-        }
-    } else {
-        res.status(201).json(false);
+        return res.status(200).json(false);
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json(false);
     }
-}
+};
 
 const alterarNomeUsuario = async (req, res) => {
     const idUsuarioSessao = req.cookies.auth_token || "";
     const { usuarioUpdate } = req.body;
 
+    if (!idUsuarioSessao || !usuarioUpdate) return res.status(400).json({ err: true });
+
     const regex = /[^a-zA-Z0-9_.]/;
     if (regex.test(usuarioUpdate)) {
-        res.status(201).json({ message: "Não foi possível alterar o nome de usuário, pois há caractéres especiais no nome." });
-        return;
-    }
-
-    if (!idUsuarioSessao || !usuarioUpdate) {
-        res.status(500).json({ err: true });
-        return;
+        return res.status(400).json({ message: "Nome contém caracteres inválidos." });
     }
 
     try {
-        const alterarNomeUsuario = await UserService.alterarNomeUsuario(idUsuarioSessao, usuarioUpdate);
+        const resultado = await UserService.alterarNomeUsuario(idUsuarioSessao, usuarioUpdate);
 
-        if (alterarNomeUsuario.message && alterarNomeUsuario.err) {
-            res.status(201).json({ message: alterarNomeUsuario.message });
-            return null;
+        if (resultado.message && resultado.err) {
+            return res.status(400).json({ message: resultado.message });
         }
 
-        res.status(201).json(alterarNomeUsuario[0].nomeusuario);
+        return res.status(200).json(resultado[0].nomeusuario);
+
     } catch (err) {
-        res.status(501).json(false);
+        console.error(err);
+        return res.status(500).json(false);
     }
-}
+};
 
 const alterarSenhaUsuario = async (req, res) => {
     const idUsuarioSessao = req.cookies.auth_token || "";
     const { senhaAntigaUpdate, senhaUpdate } = req.body;
 
     if (!idUsuarioSessao || !senhaAntigaUpdate || !senhaUpdate) {
-        res.status(500).json({ err: true });
-        return;
+        return res.status(400).json({ err: true });
     }
 
     try {
-        const alterarSenhaUsuario = await UserService.alterarSenhaUsuario(idUsuarioSessao, senhaAntigaUpdate, senhaUpdate);
+        const resultado = await UserService.alterarSenhaUsuario(idUsuarioSessao, senhaAntigaUpdate, senhaUpdate);
 
-        if (!alterarSenhaUsuario) {
-            res.status(201).json({ message: "A senha antiga está incorreta!" });
-            return null;
+        if (!resultado) {
+            return res.status(400).json({ message: "A senha antiga está incorreta!" });
         }
 
-        res.status(201).json(true);
+        return res.status(200).json(true);
+
     } catch (err) {
-        console.log(err);
-        res.status(501).json(false);
+        console.error(err);
+        return res.status(500).json(false);
     }
-}
+};
 
 const deletarConta = async (req, res) => {
     const idUsuarioSessao = req.cookies.auth_token || "";
-    if (!idUsuarioSessao) {
-        res.status(500).json({ err: true });
-        return;
-    }
+    if (!idUsuarioSessao) return res.status(400).json({ err: true });
 
     try {
         await UserService.deletarConta(idUsuarioSessao);
@@ -165,15 +153,25 @@ const deletarConta = async (req, res) => {
         res.clearCookie("auth_token", {
             path: "/",
             httpOnly: true,
-            secure: true, // alterado
-            sameSite: "Lax"
+            secure: true,
+            sameSite: "None"
         });
 
-        res.status(201).json(true);
+        return res.status(200).json(true);
 
     } catch (err) {
-        res.status(501).json(false);
+        console.error(err);
+        return res.status(500).json(false);
     }
-}
+};
 
-module.exports = { cadastro, login, perfil, logout, Islogged, alterarNomeUsuario, alterarSenhaUsuario, deletarConta };
+module.exports = {
+    cadastro,
+    login,
+    perfil,
+    logout,
+    Islogged,
+    alterarNomeUsuario,
+    alterarSenhaUsuario,
+    deletarConta
+};
