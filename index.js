@@ -13,7 +13,7 @@ server.use(cookieParser());
 // Configuração de CORS para qualquer origem
 const corsOptions = {
   origin: true, // aceita qualquer origem
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 };
