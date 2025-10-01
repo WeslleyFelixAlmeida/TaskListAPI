@@ -10,11 +10,12 @@ server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 server.use(cookieParser());
 
-const allowedOrigins = [,
-  process.env.CLIENT_URL
+// Configuração de CORS
+const allowedOrigins = [
+  process.env.CLIENT_URL,
 ];
 
-server.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -22,8 +23,15 @@ server.use(cors({
       callback(new Error("Origin not allowed by CORS"));
     }
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
-}));
+};
+
+server.use(cors(corsOptions));
+
+// Responder corretamente à preflight (OPTIONS)
+server.options('*', cors(corsOptions));
 
 // Rotas
 const UserRoutes = require('./Routes/UserRoutes');
